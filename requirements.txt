@@ -5,7 +5,7 @@ fastapi==0.121.1
 pydantic==2.12.4
 starlette==0.49.3
 uvicorn[standard]==0.38.0
-
+gunicorn-23.0.0
 # Optional utilities
 python-dotenv==1.0.1     # Load environment variables from .env files
 watchfiles==0.21.0       # Enables fast reload with --reload
