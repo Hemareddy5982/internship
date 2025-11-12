@@ -1,21 +1,25 @@
+# services/activity_service.py
 from sqlalchemy.orm import Session
-from datetime import datetime
-from db.models import Activity  # adjust import path if needed
+from db.models import Activity
 from schemas.schemas import TrackActivityRequest
+from datetime import datetime
+import json
 
 
-# -----------------------------
-# 🏃 Track Activity
-# -----------------------------
 def track_activity(db: Session, payload: TrackActivityRequest):
     """
     Insert a new activity record into the database.
     """
+    # ✅ Ensure payload is always a JSON string
+    payload_data = payload.payload
+    if isinstance(payload_data, dict):
+        payload_data = json.dumps(payload_data)
+
     new_activity = Activity(
         user_id=payload.user_id,
         event_type=payload.event_type,
         page=payload.page,
-        payload=payload.payload,
+        payload=payload_data,  # ✅ Always stored as string
         created_at=payload.timestamp or datetime.utcnow()
     )
 
@@ -25,39 +29,23 @@ def track_activity(db: Session, payload: TrackActivityRequest):
     return new_activity
 
 
-# -----------------------------
-# 📜 Get User Activities (Paginated)
-# -----------------------------
-def get_user_activities(db: Session, user_id: str, skip: int = 0, limit: int = 20):
+def get_recent_activities(db: Session, limit: int = 10):
     """
-    Retrieve paginated user activity data for a specific user.
-    Returns a tuple: (activities, total_count)
+    Fetch the most recent activities.
     """
-    query = db.query(Activity).filter(Activity.user_id == user_id).order_by(Activity.created_at.desc())
+    return (
+        db.query(Activity)
+        .order_by(Activity.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+
+def get_user_activities(db: Session, user_id: str, limit: int = 20):
+    """
+    Fetch activities for a specific user.
+    """
+    query = db.query(Activity).filter(Activity.user_id == user_id)
     total = query.count()
-    activities = query.offset(skip).limit(limit).all()
-    return activities, total
-
-
-# -----------------------------
-# 🕒 Get Recent Activities
-# -----------------------------
-def get_recent_activities(db: Session, limit: int = 20):
-    """
-    Retrieve the most recent activities (for dashboard or analytics).
-    """
-    activities = db.query(Activity).order_by(Activity.created_at.desc()).limit(limit).all()
-    return activities
-
-
-# -----------------------------
-# 📋 (Optional) Get All Activities
-# -----------------------------
-def get_all_activities(db: Session, skip: int = 0, limit: int = 20):
-    """
-    Retrieve all activities (admin-level, paginated).
-    """
-    query = db.query(Activity).order_by(Activity.created_at.desc())
-    total = query.count()
-    activities = query.offset(skip).limit(limit).all()
-    return activities, total
+    results = query.order_by(Activity.created_at.desc()).limit(limit).all()
+    return results, total
