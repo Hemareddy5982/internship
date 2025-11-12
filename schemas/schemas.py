@@ -1,7 +1,8 @@
 from pydantic import BaseModel, Field, model_validator
-from typing import Optional, List
+from typing import Optional, List, Generic, TypeVar
 from datetime import datetime
 import json
+from pydantic.generics import GenericModel
 
 # ------------------------
 # Request Schemas
@@ -12,6 +13,7 @@ class TrackActivityRequest(BaseModel):
     page: Optional[str] = Field(None, example="/home")
     payload: Optional[dict] = Field(None, example={"action": "click"})
     timestamp: Optional[datetime] = Field(None)
+
 
 # ------------------------
 # Response Schemas
@@ -49,6 +51,7 @@ class ActivityResponse(BaseModel):
             values.payload = payload
         return values
 
+
 # ------------------------
 # Analytics Schemas
 # ------------------------
@@ -58,12 +61,15 @@ class SummaryResponse(BaseModel):
     by_event_type: dict
     top_pages: List[dict]
 
+
 class TrendPoint(BaseModel):
     date: str
     count: int
 
+
 class TrendsResponse(BaseModel):
     trends: List[TrendPoint]
+
 
 # ------------------------
 # Dashboard Schemas
@@ -73,3 +79,25 @@ class DashboardOverview(BaseModel):
     active_users_last_15m: int
     recent_activities: List[ActivityResponse]
     top_pages: List[dict]
+
+
+# ------------------------
+# Generic Pagination Schema
+# ------------------------
+T = TypeVar("T")
+
+class PaginatedResponse(GenericModel, Generic[T]):
+    """
+    Generic pagination response model.
+    Can be reused for any data type, e.g. PaginatedResponse[ActivityResponse]
+    """
+    page: int = Field(..., example=1)
+    limit: int = Field(..., example=20)
+    total: int = Field(..., example=150)
+    items: List[T]
+
+class PaginatedTrendsResponse(BaseModel):
+    items: List[TrendPoint]
+    total: int
+    page: int
+    limit: int

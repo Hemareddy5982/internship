@@ -1,47 +1,63 @@
-# app/services/activity_service.py
 from sqlalchemy.orm import Session
 from datetime import datetime
-import json
+from db.models import Activity  # adjust import path if needed
+from schemas.schemas import TrackActivityRequest
 
-from db.models import Activity
-from schemas.schemas import TrackActivityRequest, ActivityResponse
-from utils.analytics_utils import parse_payload_text
 
-def track_activity(db: Session, payload: TrackActivityRequest) -> ActivityResponse:
-    payload_text = None
-    if payload.payload is not None:
-        payload_text = json.dumps(payload.payload)
-
-    ts = payload.timestamp or datetime.utcnow()
-    act = Activity(
+# -----------------------------
+# 🏃 Track Activity
+# -----------------------------
+def track_activity(db: Session, payload: TrackActivityRequest):
+    """
+    Insert a new activity record into the database.
+    """
+    new_activity = Activity(
         user_id=payload.user_id,
         event_type=payload.event_type,
         page=payload.page,
-        payload=payload_text,
-        created_at=ts
+        payload=payload.payload,
+        created_at=payload.timestamp or datetime.utcnow()
     )
-    db.add(act)
+
+    db.add(new_activity)
     db.commit()
-    db.refresh(act)
+    db.refresh(new_activity)
+    return new_activity
 
-    resp = ActivityResponse.from_orm(act)
-    resp.payload = parse_payload_text(act.payload)
-    return resp
 
-def get_user_activities(db: Session, user_id: str, limit: int = 200) -> list[ActivityResponse]:
-    rows = db.query(Activity).filter(Activity.user_id == user_id).order_by(Activity.created_at.desc()).limit(limit).all()
-    result = []
-    for r in rows:
-        ar = ActivityResponse.from_orm(r)
-        ar.payload = parse_payload_text(r.payload)
-        result.append(ar)
-    return result
+# -----------------------------
+# 📜 Get User Activities (Paginated)
+# -----------------------------
+def get_user_activities(db: Session, user_id: str, skip: int = 0, limit: int = 20):
+    """
+    Retrieve paginated user activity data for a specific user.
+    Returns a tuple: (activities, total_count)
+    """
+    query = db.query(Activity).filter(Activity.user_id == user_id).order_by(Activity.created_at.desc())
+    total = query.count()
+    activities = query.offset(skip).limit(limit).all()
+    return activities, total
 
-def get_recent_activities(db: Session, limit: int = 50) -> list[ActivityResponse]:
-    rows = db.query(Activity).order_by(Activity.created_at.desc()).limit(limit).all()
-    result = []
-    for r in rows:
-        ar = ActivityResponse.from_orm(r)
-        ar.payload = parse_payload_text(r.payload)
-        result.append(ar)
-    return result
+
+# -----------------------------
+# 🕒 Get Recent Activities
+# -----------------------------
+def get_recent_activities(db: Session, limit: int = 20):
+    """
+    Retrieve the most recent activities (for dashboard or analytics).
+    """
+    activities = db.query(Activity).order_by(Activity.created_at.desc()).limit(limit).all()
+    return activities
+
+
+# -----------------------------
+# 📋 (Optional) Get All Activities
+# -----------------------------
+def get_all_activities(db: Session, skip: int = 0, limit: int = 20):
+    """
+    Retrieve all activities (admin-level, paginated).
+    """
+    query = db.query(Activity).order_by(Activity.created_at.desc())
+    total = query.count()
+    activities = query.offset(skip).limit(limit).all()
+    return activities, total

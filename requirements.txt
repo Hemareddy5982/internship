@@ -10,3 +10,4 @@ SQLAlchemy==2.0.44
 python-dotenv==1.0.1     # Load environment variables from .env files
 watchfiles==0.21.0       # Enables fast reload with --reload
 orjson==3.10.7           # Faster JSON (optional but supported)
+pytest
