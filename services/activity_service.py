@@ -10,7 +10,7 @@ def track_activity(db: Session, payload: TrackActivityRequest):
     """
     Insert a new activity record into the database.
     """
-    # ✅ Ensure payload is always a JSON string
+    # Ensure payload is always a JSON string
     payload_data = payload.payload
     if isinstance(payload_data, dict):
         payload_data = json.dumps(payload_data)
@@ -19,7 +19,7 @@ def track_activity(db: Session, payload: TrackActivityRequest):
         user_id=payload.user_id,
         event_type=payload.event_type,
         page=payload.page,
-        payload=payload_data,  # ✅ Always stored as string
+        payload=payload_data,
         created_at=payload.timestamp or datetime.utcnow()
     )
 
@@ -41,11 +41,20 @@ def get_recent_activities(db: Session, limit: int = 10):
     )
 
 
-def get_user_activities(db: Session, user_id: str, limit: int = 20):
+def get_user_activities(db: Session, user_id: str, skip: int = 0, limit: int = 20):
     """
-    Fetch activities for a specific user.
+    Fetch activities for a specific user WITH pagination support.
+    This must accept skip + limit because paginate() sends them.
     """
     query = db.query(Activity).filter(Activity.user_id == user_id)
+
     total = query.count()
-    results = query.order_by(Activity.created_at.desc()).limit(limit).all()
+
+    results = (
+        query.order_by(Activity.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
     return results, total

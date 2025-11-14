@@ -10,3 +10,5 @@ init_db()
 
 # Include the single router containing all endpoints
 app.include_router(router)
+
+
