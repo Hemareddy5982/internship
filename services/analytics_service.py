@@ -53,7 +53,7 @@ def get_trends(db: Session, days: int = 14, skip: int = 0, limit: int = 20):
         )
         .filter(Activity.created_at >= start)
         .group_by("day")
-        .order_by("day")
+        .order_by(desc(Activity.created_at))
         .all()
     )
 

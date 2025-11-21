@@ -1,5 +1,6 @@
 # services/activity_service.py
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from db.models import Activity
 from schemas.schemas import TrackActivityRequest
 from datetime import datetime
@@ -14,7 +15,7 @@ def track_activity(db: Session, payload: TrackActivityRequest):
     payload_data = payload.payload
     if isinstance(payload_data, dict):
         payload_data = json.dumps(payload_data)
-
+    print(payload,'testing payload')
     new_activity = Activity(
         user_id=payload.user_id,
         event_type=payload.event_type,
@@ -41,20 +42,28 @@ def get_recent_activities(db: Session, limit: int = 10):
     )
 
 
-def get_user_activities(db: Session, user_id: str, skip: int = 0, limit: int = 20):
-    """
-    Fetch activities for a specific user WITH pagination support.
-    This must accept skip + limit because paginate() sends them.
-    """
-    query = db.query(Activity).filter(Activity.user_id == user_id)
+def get_user_activities(db, user_id: str, skip: int, limit: int):
+    from sqlalchemy import text
 
-    total = query.count()
+    # total count
+    total = db.execute(
+        text("SELECT COUNT(*) FROM activities WHERE user_id = :uid"),
+        {"uid": user_id}
+    ).scalar()
 
-    results = (
-        query.order_by(Activity.created_at.desc())
-        .offset(skip)
-        .limit(limit)
-        .all()
-    )
+    # rows
+    rows = db.execute(
+        text("""
+            SELECT *
+            FROM activities
+            WHERE user_id = :uid
+            ORDER BY created_at DESC
+            LIMIT :limit OFFSET :skip
+        """),
+        {"uid": user_id, "limit": limit, "skip": skip}
+    ).mappings().all()
 
-    return results, total
+    # 🔥 Convert RowMapping → Pure Python dict (Pydantic-safe)
+    clean_rows = [dict(row) for row in rows]
+
+    return clean_rows, total

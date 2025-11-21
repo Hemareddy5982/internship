@@ -5,5 +5,5 @@ def health_check():
     return {
         "status": "ok",
         "message": "namma app is ok 😊",
-        "time": datetime.utcnow().isoformat() + "Z"
+        "time": datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
     }

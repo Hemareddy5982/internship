@@ -1,0 +1,28 @@
+-- database: ./activity.db
+
+
+select count(id) from activities;
+
+
+SELECT count(distinct(user_id)) FROM activities;
+
+
+SELECT event_type, count(event_type) FROM activities
+group by event_type;
+
+
+SELECT 
+    page,
+    COUNT(*) AS page_count,
+    MAX(created_at) AS last_visited
+FROM activities
+WHERE page IS NOT NULL
+GROUP BY page
+ORDER BY page_count DESC, last_visited DESC
+LIMIT 6;
+
+SELECT COUNT(DISTINCT user_id),user_id,created_at AS active_users
+FROM activities
+WHERE created_at >= datetime('now', '-15 minutes');
+
+
